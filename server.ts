@@ -139,9 +139,7 @@ const port = process.env.PORT || 3000;
       message: { error: 'Too many requests, please try again later' },
       standardHeaders: true,
       legacyHeaders: false,
-      keyGenerator: (req: AuthenticatedRequest) => {
-        return req.user?.id || req.ip || 'anonymous';
-      }
+      validate: { xForwardedForHeader: false }
     });
 
     const authLimiter = rateLimit({

@@ -45,4 +45,4 @@ RUN mkdir -p .sessions public/uploads logs data sessions
 EXPOSE 3000
 
 # Start the custom server with transpile-only (skips type checking for faster startup)
-CMD ["npx", "ts-node", "--transpile-only", "server.ts"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate && npx ts-node --transpile-only server.ts"]
