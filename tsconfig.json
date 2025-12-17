@@ -41,7 +41,8 @@
   ],
   "ts-node": {
     "compilerOptions": {
-      "module": "commonjs"
+      "module": "commonjs",
+      "lib": ["dom", "dom.iterable", "esnext"]
     }
   }
 }
