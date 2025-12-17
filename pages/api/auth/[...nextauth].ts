@@ -52,10 +52,12 @@ export const authOptions: NextAuthOptions = {
         async signIn({ user, account }) {
             if (account?.provider === "google" && user.email) {
                 const existingUser = await prisma.user.findUnique({
-                    where: { email: user.email }
+                    where: { email: user.email },
+                    include: { tenant: true }
                 });
 
                 if (!existingUser) {
+                    // Create new user
                     const newUser = await prisma.user.create({
                         data: {
                             email: user.email,
@@ -65,6 +67,7 @@ export const authOptions: NextAuthOptions = {
                         }
                     });
 
+                    // Create tenant for new user
                     await prisma.tenant.create({
                         data: {
                             name: `${user.name || 'User'}'s Organization`,
@@ -75,6 +78,17 @@ export const authOptions: NextAuthOptions = {
                     user.id = newUser.id;
                 } else {
                     user.id = existingUser.id;
+
+                    // Ensure existing user has a tenant (fix for users who might be missing one)
+                    if (!existingUser.tenant) {
+                        await prisma.tenant.create({
+                            data: {
+                                name: `${existingUser.name || 'User'}'s Organization`,
+                                userId: existingUser.id
+                            }
+                        });
+                        console.log(`Created missing tenant for existing user: ${existingUser.email}`);
+                    }
                 }
             }
             return true;
@@ -84,12 +98,13 @@ export const authOptions: NextAuthOptions = {
                 (session.user as any).id = token.sub;
                 const user = await prisma.user.findUnique({
                     where: { id: token.sub },
-                    select: { tier: true, role: true, password: true }
+                    select: { tier: true, role: true, password: true, trialStartedAt: true }
                 });
                 if (user) {
                     (session.user as any).tier = user.tier;
                     (session.user as any).role = user.role;
                     (session.user as any).hasPassword = !!user.password;
+                    (session.user as any).hasSelectedPlan = !!user.trialStartedAt;
                 }
             }
             return session;

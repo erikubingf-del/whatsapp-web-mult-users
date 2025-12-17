@@ -845,6 +845,51 @@ const port = process.env.PORT || 3000;
       }
     });
 
+    // Select plan (for onboarding - sets trial dates)
+    server.post('/api/subscription/select', requireAuth, validateBody(subscriptionSchema), async (req: AuthenticatedRequest, res) => {
+      try {
+        const { tier } = req.body;
+
+        if (!req.user) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        const now = new Date();
+        const trialEnds = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+
+        // Update user with tier and trial dates
+        const user = await prisma.user.update({
+          where: { id: req.user.id },
+          data: {
+            tier,
+            trialStartedAt: now,
+            trialEndsAt: trialEnds,
+            isTrialActive: true
+          }
+        });
+
+        // Ensure user has a tenant (important for Google OAuth users)
+        const existingTenant = await prisma.tenant.findFirst({
+          where: { userId: req.user.id }
+        });
+
+        if (!existingTenant) {
+          await prisma.tenant.create({
+            data: {
+              name: `${user.name || 'User'}'s Organization`,
+              userId: req.user.id
+            }
+          });
+          console.log(`Created tenant for user ${req.user.id}`);
+        }
+
+        res.json({ success: true, tier, trialStartedAt: now, trialEndsAt: trialEnds });
+      } catch (e: any) {
+        console.error('Subscription select error:', e);
+        res.status(500).json({ error: dev ? e.message : 'Selection failed' });
+      }
+    });
+
     // ============================================
     // API ROUTES: Settings (Protected)
     // ============================================

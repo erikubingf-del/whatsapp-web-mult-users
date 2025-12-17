@@ -228,7 +228,17 @@ export const translations = {
 
         // User menu
         settings: "Settings",
-        logOut: "Log Out"
+        logOut: "Log Out",
+
+        // Plan selection (onboarding)
+        selectPlanTitle: "Choose Your Plan",
+        selectPlanWelcome: "Welcome to Zaptodos!",
+        selectPlanDesc: "Select a plan to get started. All plans include a 30-day free trial.",
+        freeTrialBadge: "30 days free",
+        startFreeTrial: "Start Free Trial",
+        selectThisPlan: "Select Plan",
+        trialInfo: "Your free trial starts today. No credit card required.",
+        trialEndsInfo: "After your trial, you'll be billed monthly. Cancel anytime."
     },
     pt: {
         // Dashboard / Home
@@ -459,6 +469,16 @@ export const translations = {
 
         // User menu
         settings: "Configurações",
-        logOut: "Sair"
+        logOut: "Sair",
+
+        // Plan selection (onboarding)
+        selectPlanTitle: "Escolha seu Plano",
+        selectPlanWelcome: "Bem-vindo ao Zaptodos!",
+        selectPlanDesc: "Selecione um plano para começar. Todos os planos incluem 30 dias grátis.",
+        freeTrialBadge: "30 dias grátis",
+        startFreeTrial: "Iniciar Período Grátis",
+        selectThisPlan: "Selecionar Plano",
+        trialInfo: "Seu período grátis começa hoje. Não é necessário cartão de crédito.",
+        trialEndsInfo: "Após o período grátis, você será cobrado mensalmente. Cancele quando quiser."
     }
 };

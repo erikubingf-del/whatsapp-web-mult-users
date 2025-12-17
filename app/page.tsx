@@ -38,11 +38,17 @@ export default function Home() {
   const menuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Auth check - redirect to login if not authenticated
+  // Auth check - redirect to login if not authenticated, or to plan selection if no plan selected
   useEffect(() => {
     if (status === 'loading') return;
     if (!session) {
       router.push('/login');
+      return;
+    }
+    // Check if user has selected a plan (has started trial)
+    const hasSelectedPlan = (session.user as any)?.hasSelectedPlan;
+    if (!hasSelectedPlan) {
+      router.push('/select-plan');
     }
   }, [session, status, router]);
 
