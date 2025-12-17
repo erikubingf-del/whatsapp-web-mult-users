@@ -20,6 +20,8 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV PORT 3000
+ENV TS_NODE_TRANSPILE_ONLY 1
+ENV TS_NODE_SKIP_PROJECT true
 
 # Install Node.js (Playwright image has Node, but let's ensure version match if needed, usually it's fine)
 # The Playwright image is based on Ubuntu, so we use apt-get if we need extra stuff.
@@ -30,10 +32,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/server.ts ./server.ts
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/server.ts ./server.ts
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
 # Create directories for persistent data
 RUN mkdir -p .sessions public/uploads logs data sessions
