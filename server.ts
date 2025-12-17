@@ -206,6 +206,14 @@ const port = process.env.PORT || 3000;
       next();
     };
 
+    // Lighter auth middleware - only checks user, not tenant (for onboarding flows)
+    const requireAuthOnly = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      next();
+    };
+
     // ============================================
     // AUTH MIDDLEWARE: Verify Profile Ownership
     // ============================================
@@ -448,6 +456,10 @@ const port = process.env.PORT || 3000;
 
         if (req.user && req.tenantId) {
           profiles = await sessionManager.listProfiles(req.tenantId);
+        } else if (req.user && !req.tenantId) {
+          // User exists but no tenant yet - return empty profiles
+          // (This happens during onboarding before plan selection)
+          profiles = [];
         } else if (dev) {
           // Dev fallback
           profiles = await sessionManager.listProfiles('default-tenant');
@@ -845,8 +857,8 @@ const port = process.env.PORT || 3000;
       }
     });
 
-    // Select plan (for onboarding - sets trial dates)
-    server.post('/api/subscription/select', requireAuth, validateBody(subscriptionSchema), async (req: AuthenticatedRequest, res) => {
+    // Select plan (for onboarding - sets trial dates, creates tenant if needed)
+    server.post('/api/subscription/select', requireAuthOnly, validateBody(subscriptionSchema), async (req: AuthenticatedRequest, res) => {
       try {
         const { tier } = req.body;
 
@@ -891,9 +903,9 @@ const port = process.env.PORT || 3000;
     });
 
     // ============================================
-    // API ROUTES: Settings (Protected)
+    // API ROUTES: Settings (Protected - but allows users without tenant for onboarding)
     // ============================================
-    server.get('/api/settings', requireAuth, async (req: AuthenticatedRequest, res) => {
+    server.get('/api/settings', requireAuthOnly, async (req: AuthenticatedRequest, res) => {
       try {
         if (!req.user) return res.status(401).json({ error: 'Authentication required' });
 
