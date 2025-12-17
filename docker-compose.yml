@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # Main application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whatsapp-multi-app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/app.db
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      # Persist database
+      - app-data:/app/data
+      # Persist browser sessions
+      - sessions-data:/app/sessions
+      - sessions-state:/app/.sessions
+      # Persist uploaded media
+      - uploads-data:/app/public/uploads
+      # Persist logs
+      - logs-data:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - whatsapp-net
+
+  # Optional: Redis for session caching and job queues (if you want to scale)
+  redis:
+    image: redis:7-alpine
+    container_name: whatsapp-multi-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - whatsapp-net
+    profiles:
+      - with-redis
+
+  # Optional: PostgreSQL for production database (instead of SQLite)
+  postgres:
+    image: postgres:15-alpine
+    container_name: whatsapp-multi-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-whatsapp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required for postgres profile}
+      POSTGRES_DB: ${POSTGRES_DB:-whatsapp_multi}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - whatsapp-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-whatsapp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - with-postgres
+
+networks:
+  whatsapp-net:
+    driver: bridge
+
+volumes:
+  app-data:
+    driver: local
+  sessions-data:
+    driver: local
+  sessions-state:
+    driver: local
+  uploads-data:
+    driver: local
+  logs-data:
+    driver: local
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local

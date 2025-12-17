@@ -1,0 +1,190 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  accounts      Account[]
+  sessions      Session[]
+
+  // Role
+  role             String   @default("user") // user, admin
+
+  // Subscription
+  stripeCustomerId String?
+  tier             String   @default("STARTER") // STARTER, PRO, BUSINESS
+  language         String   @default("en") // en, pt, es, fr, de
+
+  // Trial Period
+  trialStartedAt   DateTime?
+  trialEndsAt      DateTime?
+  isTrialActive    Boolean  @default(true)
+
+  // Password Reset
+  resetToken       String?
+  resetTokenExpiry DateTime?
+
+  // 2FA (TOTP)
+  twoFactorEnabled  Boolean  @default(false)
+  twoFactorSecret   String?  // Encrypted TOTP secret
+  twoFactorBackupCodes String? // Encrypted backup codes (JSON array)
+
+  // Multi-tenancy
+  tenant        Tenant?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String
+  companyName String   @default("My Users")
+  logoUrl     String?  // Custom logo URL for white-labeling
+  createdAt   DateTime @default(now())
+  profiles    Profile[]
+
+  userId    String?  @unique
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Profile {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  phoneNumber String?
+  sessionPath String   // Path to storageState.json
+  isActive    Boolean  @default(true)
+  lastScraped DateTime?
+  chats       Chat[]
+  analytics   AnalyticsSummary[]
+}
+
+model Chat {
+  id        String    @id @default(uuid())
+  profileId String
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  remoteJid String    // The client's phone number/ID (unique per profile)
+  name      String    // Contact name or number
+  
+  messages  Message[]
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([profileId, remoteJid])
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  chatId      String
+  chat        Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  
+  remoteJid   String   // Kept for reference/hashing
+  fromMe      Boolean  // true = salesperson, false = client
+  body        String
+  timestamp   DateTime
+  
+  mediaUrl    String?  // Path to local file or URL
+  mediaType   String?  // 'image', 'video', 'audio', 'document'
+
+  messageHash String   @unique // SHA256(timestamp + remoteJid + body)
+  
+  metadata    String?    // JSON string
+}
+
+model AnalyticsSummary {
+  id          String   @id @default(uuid())
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id])
+  date        DateTime
+
+  msgCountIn  Int
+  msgCountOut Int
+  avgReplyTime Float? // in seconds
+
+  unansweredCount Int
+  keywordsFound   String // JSON string
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  timestamp   DateTime @default(now())
+
+  // Who performed the action
+  userId      String?
+  userEmail   String?
+  tenantId    String?
+
+  // What action was performed
+  action      String   // e.g., 'login', 'profile.create', 'backup.start', 'settings.update'
+  category    String   // e.g., 'auth', 'profile', 'backup', 'settings', 'admin'
+
+  // Target of the action
+  targetType  String?  // e.g., 'profile', 'user', 'session'
+  targetId    String?  // ID of the target entity
+
+  // Additional context
+  details     String?  // JSON string with additional details
+  ipAddress   String?
+  userAgent   String?
+
+  // Result
+  success     Boolean  @default(true)
+  errorMessage String?
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([action])
+  @@index([timestamp])
+}
