@@ -361,38 +361,50 @@ const port = process.env.PORT || 3000;
             });
           }
 
+          if (!profile) {
+            console.error(`Profile ${profileId} not found in database`);
+            socket.emit('error', { message: 'Profile not found' });
+            return;
+          }
+
           console.log(`Socket ${socket.id} joining session ${profileId}`);
           socket.join(profileId);
 
           // Ensure browser context exists (retry if it failed during profile creation)
           const hasContext = browserManager.hasContext(profileId);
-          if (!hasContext && profile?.sessionPath) {
-            console.log(`Creating missing browser context for profile ${profileId}`);
+          console.log(`Profile ${profileId}: hasContext=${hasContext}, sessionPath=${profile.sessionPath}`);
+
+          if (!hasContext) {
+            console.log(`Creating browser context for profile ${profileId}...`);
             try {
               await browserManager.createContext({
                 profileId: profile.id,
                 sessionPath: profile.sessionPath
               });
               browserManager.startAutoSave(profile.id, profile.sessionPath);
+              console.log(`Browser context created for ${profileId}`);
             } catch (browserError: any) {
-              console.error(`Failed to create browser context for ${profileId}:`, browserError.message);
-              socket.emit('error', { message: 'Failed to start browser session. Please try again.' });
+              console.error(`Failed to create browser context for ${profileId}:`, browserError);
+              socket.emit('error', { message: `Failed to start browser: ${browserError.message}` });
               return;
             }
           }
 
           // Start screencast
+          console.log(`Starting screencast for ${profileId}...`);
           const screencastStarted = await browserManager.startScreencast(profileId, (buffer) => {
             io.to(profileId).emit('frame', buffer.toString('base64'));
           });
 
           if (!screencastStarted) {
             console.error(`Screencast failed to start for ${profileId}`);
-            socket.emit('error', { message: 'Failed to start session display. The browser may not be ready.' });
+            socket.emit('error', { message: 'Failed to start session display. Browser may not be ready.' });
+          } else {
+            console.log(`Screencast started for ${profileId}`);
           }
         } catch (e: any) {
           console.error('Error joining session:', e);
-          socket.emit('error', { message: 'Failed to join session' });
+          socket.emit('error', { message: `Session error: ${e.message}` });
         }
       });
 
