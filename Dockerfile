@@ -35,6 +35,9 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/server.ts ./server.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
+# Regenerate Prisma Client for Debian
+RUN npx prisma generate
+
 # Create directories for persistent data
 RUN mkdir -p .sessions public/uploads logs data sessions
 
