@@ -20,8 +20,6 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV PORT 3000
-ENV TS_NODE_TRANSPILE_ONLY 1
-ENV TS_NODE_SKIP_PROJECT true
 
 # Install Node.js (Playwright image has Node, but let's ensure version match if needed, usually it's fine)
 # The Playwright image is based on Ubuntu, so we use apt-get if we need extra stuff.
