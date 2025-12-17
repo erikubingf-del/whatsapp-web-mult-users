@@ -40,8 +40,5 @@ RUN mkdir -p .sessions public/uploads logs data sessions
 # Expose port
 EXPOSE 3000
 
-# Start the custom server
-# We use ts-node in dev, but for prod we should probably compile server.ts or use ts-node with transpileOnly
-# For simplicity in this prototype, we'll use ts-node but ideally we should compile it.
-# Let's use ts-node for now as it's in dependencies.
-CMD ["npx", "ts-node", "server.ts"]
+# Start the custom server with transpile-only (skips type checking for faster startup)
+CMD ["npx", "ts-node", "--transpile-only", "server.ts"]
