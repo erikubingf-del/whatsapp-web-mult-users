@@ -1,20 +1,17 @@
 'use client';
 
-import { SessionProvider } from "next-auth/react";
-import { useState, useEffect } from "react";
-import { MobileWarning } from "./components/MobileWarning";
+import dynamic from "next/dynamic";
+
+// Dynamically import components that use hooks to avoid SSR issues
+const SessionProviderWrapper = dynamic(
+    () => import("./components/SessionProviderWrapper"),
+    { ssr: false }
+);
 
 export function Providers({ children }: { children: React.ReactNode }) {
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
     return (
-        <SessionProvider>
-            {mounted && <MobileWarning />}
+        <SessionProviderWrapper>
             {children}
-        </SessionProvider>
+        </SessionProviderWrapper>
     );
 }

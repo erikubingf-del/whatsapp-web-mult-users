@@ -102,21 +102,42 @@ export default function Home() {
     }
   };
 
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const createProfile = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || createLoading) return;
+    setCreateLoading(true);
+    setCreateError(null);
     try {
       const res = await fetch('/api/profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newName })
       });
+      const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
         setNewName('');
         setIsCreating(false);
         fetchProfiles();
+      } else {
+        // Profile might still be created even on error - refresh anyway
+        setCreateError(data.error || 'Failed to create profile');
+        fetchProfiles();
+        // Auto-close form after showing error briefly
+        setTimeout(() => {
+          setNewName('');
+          setIsCreating(false);
+          setCreateError(null);
+        }, 2000);
       }
     } catch (e) {
       console.error('Error creating profile:', e);
+      setCreateError('Network error');
+      fetchProfiles(); // Still try to refresh
+    } finally {
+      setCreateLoading(false);
     }
   };
 
@@ -407,18 +428,39 @@ export default function Home() {
                 <input
                   autoFocus
                   type="text"
-                  placeholder="Profile Name"
+                  placeholder={t.profileName}
                   className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white mb-2 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 placeholder:text-slate-600"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') createProfile();
-                    if (e.key === 'Escape') setIsCreating(false);
+                    if (e.key === 'Enter' && !createLoading) createProfile();
+                    if (e.key === 'Escape' && !createLoading) setIsCreating(false);
                   }}
+                  disabled={createLoading}
                 />
+                {createError && (
+                  <div className="text-xs text-red-400 mb-2 px-1">{createError}</div>
+                )}
                 <div className="flex gap-2">
-                  <button onClick={createProfile} className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium py-1.5 rounded-md transition-colors">Create</button>
-                  <button onClick={() => setIsCreating(false)} className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium py-1.5 rounded-md transition-colors">Cancel</button>
+                  <button
+                    onClick={createProfile}
+                    disabled={createLoading || !newName.trim()}
+                    className="flex-1 bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-800 disabled:cursor-not-allowed text-white text-xs font-medium py-1.5 rounded-md transition-colors flex items-center justify-center gap-2"
+                  >
+                    {createLoading ? (
+                      <>
+                        <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                        {t.connecting}
+                      </>
+                    ) : t.create}
+                  </button>
+                  <button
+                    onClick={() => { setIsCreating(false); setCreateError(null); }}
+                    disabled={createLoading}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-300 text-xs font-medium py-1.5 rounded-md transition-colors"
+                  >
+                    {t.cancel}
+                  </button>
                 </div>
               </div>
             );
@@ -480,6 +522,7 @@ import { io, Socket } from 'socket.io-client';
 function SessionStream({ profileId, onStatusChange }: { profileId: string; onStatusChange: (status: 'connecting' | 'connected' | 'error') => void }) {
   const [src, setSrc] = useState<string>('');
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const imgRef = useRef<HTMLImageElement>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -510,10 +553,16 @@ function SessionStream({ profileId, onStatusChange }: { profileId: string; onSta
 
     socket.on('error', (error) => {
       console.error('Socket error:', error);
+      setConnectionStatus('error');
+      setErrorMessage(error?.message || 'An error occurred');
     });
 
     socket.on('frame', (base64: string) => {
       setSrc(`data:image/jpeg;base64,${base64}`);
+      // First frame received means we're truly connected
+      if (connectionStatus === 'connecting') {
+        setConnectionStatus('connected');
+      }
     });
 
     return () => {
@@ -589,10 +638,30 @@ function SessionStream({ profileId, onStatusChange }: { profileId: string; onSta
           />
         ) : (
           <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-slate-300 border-t-green-500 rounded-full animate-spin" />
-            <div className="text-slate-600">
-              {connectionStatus === 'error' ? 'Failed to connect. Please refresh.' : 'Connecting to session...'}
-            </div>
+            {connectionStatus === 'error' ? (
+              <>
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-center">
+                  <div className="text-red-600 font-medium mb-1">Connection Failed</div>
+                  <div className="text-slate-500 text-sm max-w-xs">{errorMessage || 'Unable to connect to session. Please try refreshing the page.'}</div>
+                </div>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors text-sm"
+                >
+                  Refresh Page
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 border-4 border-slate-300 border-t-green-500 rounded-full animate-spin" />
+                <div className="text-slate-600">Connecting to session...</div>
+              </>
+            )}
           </div>
         )}
       </div>

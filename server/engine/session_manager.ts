@@ -270,14 +270,19 @@ export class SessionManager {
             data: { sessionPath }
         });
 
-        // Initialize browser session
-        await browserManager.createContext({
-            profileId: profile.id,
-            sessionPath
-        });
+        // Initialize browser session (non-blocking - profile is returned even if browser fails)
+        try {
+            await browserManager.createContext({
+                profileId: profile.id,
+                sessionPath
+            });
 
-        // Start auto-save
-        browserManager.startAutoSave(profile.id, sessionPath);
+            // Start auto-save only if browser context was created successfully
+            browserManager.startAutoSave(profile.id, sessionPath);
+        } catch (browserError: any) {
+            console.error(`Browser initialization failed for profile ${profile.id}:`, browserError.message);
+            // Profile is still created - browser session can be retried when user selects it
+        }
 
         return profile;
     }

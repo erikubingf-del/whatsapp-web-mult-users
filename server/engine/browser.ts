@@ -277,18 +277,30 @@ export class BrowserManager {
     }
   }
 
-  async startScreencast(profileId: string, onFrame: (buffer: Buffer) => void) {
-    if (this.screencastIntervals.has(profileId)) return;
+  async startScreencast(profileId: string, onFrame: (buffer: Buffer) => void): Promise<boolean> {
+    if (this.screencastIntervals.has(profileId)) return true;
 
     console.log(`Starting screencast for ${profileId}`);
     const page = this.pages.get(profileId);
-    if (!page) return;
+    if (!page) {
+      console.error(`No page found for ${profileId} - cannot start screencast`);
+      return false;
+    }
+
+    // Try to take an initial screenshot to verify page is working
+    try {
+      const testBuffer = await page.screenshot({ type: 'jpeg', quality: 50 });
+      console.log(`Initial screenshot successful for ${profileId}, size: ${testBuffer.length}`);
+      onFrame(testBuffer); // Send first frame immediately
+    } catch (e) {
+      console.error(`Failed to take initial screenshot for ${profileId}:`, e);
+      return false;
+    }
 
     const interval = setInterval(async () => {
       try {
         if (!page.isClosed()) {
           const buffer = await page.screenshot({ type: 'jpeg', quality: 50 });
-          // console.log(`Frame captured for ${profileId}, size: ${buffer.length}`);
           onFrame(buffer);
         } else {
           console.log(`Page closed for ${profileId}, stopping screencast`);
@@ -301,6 +313,7 @@ export class BrowserManager {
     }, 100); // 10 FPS
 
     this.screencastIntervals.set(profileId, interval);
+    return true;
   }
 
   stopScreencast(profileId: string) {
@@ -431,6 +444,13 @@ export class BrowserManager {
         console.error(`Failed to save session for ${profileId}`, e);
       }
     }
+  }
+
+  /**
+   * Check if a browser context exists for a profile
+   */
+  hasContext(profileId: string): boolean {
+    return this.contexts.has(profileId);
   }
 
   /**

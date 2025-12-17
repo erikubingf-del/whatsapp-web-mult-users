@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   },
   // Use standalone output for Docker deployments
   output: 'standalone',
+  // Disable strict mode to prevent double rendering issues
+  reactStrictMode: false,
 };
 
 export default nextConfig;
