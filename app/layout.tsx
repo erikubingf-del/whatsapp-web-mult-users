@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WhatsApp Multi-User Manager",
-  description: "Manage multiple WhatsApp Web sessions with ease",
+  title: "Zaptodos - WhatsApp Manager",
+  description: "Gerencie múltiplas contas do WhatsApp em um só lugar",
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({
