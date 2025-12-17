@@ -15,10 +15,12 @@ export async function GET(req: NextRequest) {
         // Get user's tenant
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { tenantId: true }
+            select: { tenant: { select: { id: true } } }
         });
 
-        if (!user?.tenantId) {
+        const tenantId = user?.tenant?.id;
+
+        if (!tenantId) {
             return NextResponse.json({
                 totalMessages: 0,
                 totalChats: 0,
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest) {
 
         // Get profiles for this tenant
         const profiles = await prisma.profile.findMany({
-            where: { tenantId: user.tenantId },
+            where: { tenantId },
             select: {
                 id: true,
                 name: true,
@@ -46,7 +48,7 @@ export async function GET(req: NextRequest) {
             where: {
                 chat: {
                     profile: {
-                        tenantId: user.tenantId
+                        tenantId
                     }
                 }
             }
@@ -56,7 +58,7 @@ export async function GET(req: NextRequest) {
         const totalChats = await prisma.chat.count({
             where: {
                 profile: {
-                    tenantId: user.tenantId
+                    tenantId
                 }
             }
         });
@@ -72,7 +74,7 @@ export async function GET(req: NextRequest) {
             where: {
                 chat: {
                     profile: {
-                        tenantId: user.tenantId
+                        tenantId
                     }
                 },
                 timestamp: {
