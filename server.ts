@@ -14,7 +14,7 @@ import { getToken } from 'next-auth/jwt';
 import { Scraper } from './server/engine/scraper';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import {
   validateBody,
   validateQuery,
@@ -111,7 +111,7 @@ const port = process.env.PORT || 3000;
     // MIDDLEWARE: Request ID Tracking
     // ============================================
     server.use((req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      req.requestId = (req.headers['x-request-id'] as string) || uuidv4();
+      req.requestId = (req.headers['x-request-id'] as string) || crypto.randomUUID();
       res.setHeader('X-Request-ID', req.requestId);
       next();
     });
