@@ -16,7 +16,7 @@ export default function SettingsPage() {
     // Settings State
     const [companyName, setCompanyName] = useState('');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
-    const [language, setLanguage] = useState<'en' | 'pt'>('en');
+    const [language, setLanguage] = useState<'en' | 'pt'>('pt');
     const [settingsLoading, setSettingsLoading] = useState(true);
     const [logoUploading, setLogoUploading] = useState(false);
     const [logoError, setLogoError] = useState('');
@@ -73,7 +73,7 @@ export default function SettingsPage() {
                 const data = await res.json();
                 setCompanyName(data.companyName);
                 setLogoUrl(data.logoUrl);
-                setLanguage((data.language as 'en' | 'pt') || 'en');
+                setLanguage((data.language as 'en' | 'pt') || 'pt');
             }
         } catch (e) {
             console.error('Failed to fetch settings', e);

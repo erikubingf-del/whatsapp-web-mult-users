@@ -2,13 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { translations } from '../translations';
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
-    const [resetUrl, setResetUrl] = useState(''); // For dev mode
+    const [resetUrl, setResetUrl] = useState('');
+    const [language, setLanguage] = useState<'pt' | 'en'>('pt');
+
+    const t = translations[language];
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -32,10 +36,10 @@ export default function ForgotPasswordPage() {
                     setResetUrl(data.resetUrl);
                 }
             } else {
-                setError(data.error || 'An error occurred');
+                setError(data.error || t.errorOccurred);
             }
         } catch (err) {
-            setError('An error occurred. Please try again.');
+            setError(t.errorOccurred);
         } finally {
             setIsLoading(false);
         }
@@ -43,6 +47,32 @@ export default function ForgotPasswordPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#050c18] relative overflow-hidden">
+            {/* Language Switcher */}
+            <div className="absolute top-6 right-6 z-20">
+                <div className="flex items-center gap-1 bg-slate-800/50 backdrop-blur-sm rounded-lg p-1 border border-slate-700/50">
+                    <button
+                        onClick={() => setLanguage('pt')}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                            language === 'pt'
+                                ? 'bg-cyan-600 text-white'
+                                : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                        PT
+                    </button>
+                    <button
+                        onClick={() => setLanguage('en')}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                            language === 'en'
+                                ? 'bg-cyan-600 text-white'
+                                : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                        EN
+                    </button>
+                </div>
+            </div>
+
             {/* Background Effects */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/10 rounded-full blur-[100px]"></div>
@@ -51,8 +81,8 @@ export default function ForgotPasswordPage() {
 
             <div className="w-full max-w-md z-10 p-4">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Forgot Password</h1>
-                    <p className="text-slate-400">Enter your email to receive a reset link.</p>
+                    <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">{t.forgotPasswordTitle}</h1>
+                    <p className="text-slate-400">{t.forgotPasswordDesc}</p>
                 </div>
 
                 <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
@@ -78,7 +108,7 @@ export default function ForgotPasswordPage() {
                         {/* Dev mode: Show reset link */}
                         {resetUrl && (
                             <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 p-3 rounded-lg mb-6 text-xs">
-                                <div className="font-medium mb-1">Dev Mode - Reset Link:</div>
+                                <div className="font-medium mb-1">{t.devModeResetLink}</div>
                                 <a href={resetUrl} className="break-all hover:underline">{resetUrl}</a>
                             </div>
                         )}
@@ -86,7 +116,7 @@ export default function ForgotPasswordPage() {
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div>
                                 <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
-                                    Email Address
+                                    {t.emailAddress}
                                 </label>
                                 <input
                                     type="email"
@@ -102,16 +132,16 @@ export default function ForgotPasswordPage() {
                                 disabled={isLoading}
                                 className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {isLoading ? 'Sending...' : 'Send Reset Link'}
+                                {isLoading ? t.sending : t.sendResetLink}
                             </button>
                         </form>
                     </div>
 
                     <div className="bg-slate-900/50 p-6 text-center border-t border-slate-800">
                         <p className="text-sm text-slate-500">
-                            Remember your password?{' '}
+                            {t.rememberPassword}{' '}
                             <Link href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium hover:underline transition-all">
-                                Sign in
+                                {t.signIn}
                             </Link>
                         </p>
                     </div>

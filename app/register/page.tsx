@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import { translations } from '../translations';
 
 export default function RegisterPage() {
     const router = useRouter();
     const [step, setStep] = useState(1); // 1: Plan, 2: Form
     const [selectedPlan, setSelectedPlan] = useState('STARTER');
+    const [language, setLanguage] = useState<'pt' | 'en'>('pt');
 
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -17,13 +19,15 @@ export default function RegisterPage() {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    const t = translations[language];
+
     const plans = [
         {
             id: 'STARTER',
             name: 'Starter',
             price: 'R$ 9',
-            limit: '2 Accounts',
-            features: ['Basic Support', 'Standard Speed'],
+            limit: `2 ${t.accounts}`,
+            features: [t.basicSupport, t.standardSpeed],
             color: 'from-slate-700 to-slate-800',
             border: 'border-slate-600'
         },
@@ -31,8 +35,8 @@ export default function RegisterPage() {
             id: 'PRO',
             name: 'Pro',
             price: 'R$ 50',
-            limit: '5 Accounts',
-            features: ['Priority Support', 'Fast Speed', 'Analytics'],
+            limit: `5 ${t.accounts}`,
+            features: [t.prioritySupport, t.fastSpeed, t.analytics],
             color: 'from-cyan-900/80 to-blue-900/80',
             border: 'border-cyan-500',
             popular: true
@@ -41,8 +45,8 @@ export default function RegisterPage() {
             id: 'BUSINESS',
             name: 'Business',
             price: 'R$ 100',
-            limit: '10 Accounts',
-            features: ['24/7 Support', 'Max Speed', 'Advanced Analytics', 'API Access'],
+            limit: `10 ${t.accounts}`,
+            features: [t.support247, t.maxSpeed, t.advancedAnalytics, t.apiAccess],
             color: 'from-purple-900/80 to-indigo-900/80',
             border: 'border-purple-500'
         },
@@ -53,12 +57,12 @@ export default function RegisterPage() {
         setError('');
 
         if (password !== confirmPassword) {
-            setError('Passwords do not match');
+            setError(t.passwordsDontMatch);
             return;
         }
 
         if (password.length < 8) {
-            setError('Password must be at least 8 characters');
+            setError(t.passwordMinLength);
             return;
         }
 
@@ -78,7 +82,7 @@ export default function RegisterPage() {
                 router.push('/login');
             }
         } catch (e) {
-            setError('Registration failed. Please try again.');
+            setError(t.registrationFailed);
         } finally {
             setIsLoading(false);
         }
@@ -86,6 +90,32 @@ export default function RegisterPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#050c18] relative overflow-hidden">
+            {/* Language Switcher */}
+            <div className="absolute top-6 right-6 z-20">
+                <div className="flex items-center gap-1 bg-slate-800/50 backdrop-blur-sm rounded-lg p-1 border border-slate-700/50">
+                    <button
+                        onClick={() => setLanguage('pt')}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                            language === 'pt'
+                                ? 'bg-cyan-600 text-white'
+                                : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                        PT
+                    </button>
+                    <button
+                        onClick={() => setLanguage('en')}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                            language === 'en'
+                                ? 'bg-cyan-600 text-white'
+                                : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                        EN
+                    </button>
+                </div>
+            </div>
+
             {/* Background Effects */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/10 rounded-full blur-[100px]"></div>
@@ -95,9 +125,9 @@ export default function RegisterPage() {
             <div className="w-full max-w-4xl z-10 p-4">
                 <div className="text-center mb-10">
                     <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
-                        Join <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Whatsview</span>
+                        {t.joinTitle} <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Whatsview</span>
                     </h1>
-                    <p className="text-slate-400">Manage multiple WhatsApp accounts with ease.</p>
+                    <p className="text-slate-400">{t.manageMultiple}</p>
                 </div>
 
                 <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
@@ -112,7 +142,7 @@ export default function RegisterPage() {
                     <div className="p-8 md:p-12">
                         {step === 1 ? (
                             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                                <h2 className="text-2xl font-bold text-white text-center mb-8">Choose your Plan</h2>
+                                <h2 className="text-2xl font-bold text-white text-center mb-8">{t.chooseYourPlan}</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                                     {plans.map(plan => (
                                         <div
@@ -125,12 +155,12 @@ export default function RegisterPage() {
                                         >
                                             {plan.popular && (
                                                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">
-                                                    Most Popular
+                                                    {t.mostPopular}
                                                 </div>
                                             )}
                                             <div className="text-center">
                                                 <h3 className="text-lg font-semibold text-white mb-2">{plan.name}</h3>
-                                                <div className="text-3xl font-bold text-white mb-1">{plan.price}<span className="text-sm text-slate-400 font-normal">/mo</span></div>
+                                                <div className="text-3xl font-bold text-white mb-1">{plan.price}<span className="text-sm text-slate-400 font-normal">{t.month}</span></div>
                                                 <div className="text-sm text-cyan-400 font-medium mb-4">{plan.limit}</div>
 
                                                 <div className="space-y-2 text-left border-t border-white/10 pt-4">
@@ -150,7 +180,7 @@ export default function RegisterPage() {
                                         onClick={() => setStep(2)}
                                         className="w-full md:w-auto px-12 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold rounded-lg transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center group"
                                     >
-                                        Continue
+                                        {t.continue}
                                         <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                                     </button>
                                 </div>
@@ -158,10 +188,10 @@ export default function RegisterPage() {
                         ) : (
                             <div className="max-w-md mx-auto animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="text-center mb-8">
-                                    <h2 className="text-2xl font-bold text-white mb-2">Create your Account</h2>
+                                    <h2 className="text-2xl font-bold text-white mb-2">{t.createYourAccount}</h2>
                                     <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-400">
-                                        Selected: <span className="text-cyan-400 font-bold ml-1">{selectedPlan}</span>
-                                        <button onClick={() => setStep(1)} className="ml-2 hover:text-white transition-colors">Change</button>
+                                        {t.selected}: <span className="text-cyan-400 font-bold ml-1">{selectedPlan}</span>
+                                        <button onClick={() => setStep(1)} className="ml-2 hover:text-white transition-colors">{t.change}</button>
                                     </div>
                                 </div>
 
@@ -175,7 +205,7 @@ export default function RegisterPage() {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">First Name</label>
+                                            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t.firstName}</label>
                                             <input
                                                 type="text"
                                                 value={firstName}
@@ -186,7 +216,7 @@ export default function RegisterPage() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Last Name</label>
+                                            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t.lastName}</label>
                                             <input
                                                 type="text"
                                                 value={lastName}
@@ -198,7 +228,7 @@ export default function RegisterPage() {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email Address</label>
+                                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t.emailAddress}</label>
                                         <input
                                             type="email"
                                             value={email}
@@ -210,7 +240,7 @@ export default function RegisterPage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
+                                            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t.password}</label>
                                             <input
                                                 type="password"
                                                 value={password}
@@ -221,7 +251,7 @@ export default function RegisterPage() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Confirm</label>
+                                            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">{t.confirmPassword}</label>
                                             <input
                                                 type="password"
                                                 value={confirmPassword}
@@ -244,9 +274,9 @@ export default function RegisterPage() {
                                         {isLoading ? (
                                             <span className="flex items-center justify-center">
                                                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                                Creating Account...
+                                                {t.creatingAccount}
                                             </span>
-                                        ) : 'Create Account'}
+                                        ) : t.createAccount}
                                     </button>
                                 </form>
 
@@ -256,7 +286,7 @@ export default function RegisterPage() {
                                             <div className="w-full border-t border-slate-800"></div>
                                         </div>
                                         <div className="relative flex justify-center text-sm">
-                                            <span className="px-4 bg-[#0d1626] text-slate-500">Or continue with</span>
+                                            <span className="px-4 bg-[#0d1626] text-slate-500">{t.orContinueWith}</span>
                                         </div>
                                     </div>
 
@@ -270,7 +300,7 @@ export default function RegisterPage() {
                                             <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                                             <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                                         </svg>
-                                        Sign up with Google
+                                        {t.signUpWithGoogle}
                                     </button>
                                 </div>
                             </div>
@@ -279,9 +309,9 @@ export default function RegisterPage() {
 
                     <div className="bg-slate-900/50 p-6 text-center border-t border-slate-800">
                         <p className="text-sm text-slate-500">
-                            Already have an account?{' '}
+                            {t.alreadyHaveAccount}{' '}
                             <a href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium hover:underline transition-all">
-                                Sign in
+                                {t.signIn}
                             </a>
                         </p>
                     </div>

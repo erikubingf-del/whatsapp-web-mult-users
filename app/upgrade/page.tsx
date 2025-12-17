@@ -3,16 +3,33 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { translations } from '../translations';
 
 export default function UpgradePage() {
     const router = useRouter();
     const { data: session, update } = useSession();
     const [loading, setLoading] = useState(false);
     const [profilesCount, setProfilesCount] = useState(0);
+    const [language, setLanguage] = useState<'pt' | 'en'>('pt');
+
+    const t = translations[language];
 
     useEffect(() => {
         fetchProfilesCount();
+        fetchSettings();
     }, []);
+
+    const fetchSettings = async () => {
+        try {
+            const res = await fetch('/api/settings');
+            if (res.ok) {
+                const data = await res.json();
+                setLanguage((data.language as 'en' | 'pt') || 'pt');
+            }
+        } catch (e) {
+            console.error('Failed to fetch settings', e);
+        }
+    };
 
     const fetchProfilesCount = async () => {
         try {
@@ -31,9 +48,9 @@ export default function UpgradePage() {
     const [downgradeError, setDowngradeError] = useState<{ show: boolean; targetPlan: string; targetLimit: number } | null>(null);
 
     const plans = [
-        { id: 'STARTER', name: 'Starter', price: 'R$ 9', limit: 2, color: 'from-slate-600 to-slate-700', features: ['2 WhatsApp accounts', 'Basic support', 'Message history'] },
-        { id: 'PRO', name: 'Pro', price: 'R$ 50', limit: 5, color: 'from-cyan-600 to-blue-700', features: ['5 WhatsApp accounts', 'Priority support', 'Message history', 'Analytics dashboard'], popular: true },
-        { id: 'BUSINESS', name: 'Business', price: 'R$ 100', limit: 10, color: 'from-purple-600 to-pink-700', features: ['10 WhatsApp accounts', '24/7 support', 'Message history', 'Analytics dashboard', 'White label branding'] },
+        { id: 'STARTER', name: 'Starter', price: 'R$ 9', limit: 2, color: 'from-slate-600 to-slate-700', features: [`2 ${t.whatsappAccounts}`, t.basicSupport, t.messageHistory] },
+        { id: 'PRO', name: 'Pro', price: 'R$ 50', limit: 5, color: 'from-cyan-600 to-blue-700', features: [`5 ${t.whatsappAccounts}`, t.prioritySupport, t.messageHistory, t.analyticsDashboard], popular: true },
+        { id: 'BUSINESS', name: 'Business', price: 'R$ 100', limit: 10, color: 'from-purple-600 to-pink-700', features: [`10 ${t.whatsappAccounts}`, t.support247, t.messageHistory, t.analyticsDashboard, t.whiteLabelBrandingFeature] },
     ];
 
     const currentPlan = plans.find(p => p.id === currentTier);
@@ -79,14 +96,14 @@ export default function UpgradePage() {
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30 text-white">
                             <span className="text-xl font-bold italic" style={{ fontFamily: 'Georgia, serif' }}>Z</span>
                         </div>
-                        <h1 className="text-xl font-bold text-white">Upgrade Your Plan</h1>
+                        <h1 className="text-xl font-bold text-white">{t.upgradeYourPlan}</h1>
                     </div>
                     <button
                         onClick={() => router.push('/')}
                         className="text-slate-400 hover:text-white transition-colors flex items-center gap-2"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                        Back to Dashboard
+                        {t.backToDashboard}
                     </button>
                 </div>
             </div>
@@ -100,9 +117,12 @@ export default function UpgradePage() {
                             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         </div>
                         <div>
-                            <h2 className="text-lg font-semibold text-white mb-1">You&apos;ve reached your profile limit</h2>
+                            <h2 className="text-lg font-semibold text-white mb-1">{t.reachedProfileLimit}</h2>
                             <p className="text-slate-400">
-                                You&apos;re using <span className="text-amber-400 font-bold">{profilesCount}</span> of <span className="text-amber-400 font-bold">{currentLimit}</span> profiles on the <span className="text-white font-medium">{currentPlan?.name}</span> plan. Upgrade to add more WhatsApp accounts.
+                                {t.usingProfiles
+                                    .replace('{current}', String(profilesCount))
+                                    .replace('{limit}', String(currentLimit))
+                                    .replace('{plan}', currentPlan?.name || 'Starter')}
                             </p>
                         </div>
                     </div>
@@ -110,8 +130,8 @@ export default function UpgradePage() {
 
                 {/* Section Title */}
                 <div className="text-center mb-10">
-                    <h2 className="text-3xl font-bold text-white mb-3">Choose Your Plan</h2>
-                    <p className="text-slate-400 max-w-lg mx-auto">Select a plan that fits your needs. Upgrade anytime to unlock more features and WhatsApp accounts.</p>
+                    <h2 className="text-3xl font-bold text-white mb-3">{t.choosePlan}</h2>
+                    <p className="text-slate-400 max-w-lg mx-auto">{t.choosePlanDesc}</p>
                 </div>
 
                 {/* Plans Grid */}
@@ -134,14 +154,14 @@ export default function UpgradePage() {
                                 {/* Popular Badge */}
                                 {plan.popular && !isCurrentPlan && (
                                     <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-bold text-center py-1.5">
-                                        MOST POPULAR
+                                        {t.mostPopular.toUpperCase()}
                                     </div>
                                 )}
 
                                 {/* Current Plan Badge */}
                                 {isCurrentPlan && (
                                     <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold text-center py-1.5">
-                                        CURRENT PLAN
+                                        {t.currentPlan}
                                     </div>
                                 )}
 
@@ -154,7 +174,7 @@ export default function UpgradePage() {
                                     {/* Price */}
                                     <div className="mb-6">
                                         <span className="text-4xl font-bold text-white">{plan.price}</span>
-                                        <span className="text-slate-400 text-sm">/month</span>
+                                        <span className="text-slate-400 text-sm">{t.month}</span>
                                     </div>
 
                                     {/* Limit Highlight */}
@@ -164,7 +184,7 @@ export default function UpgradePage() {
                                         </div>
                                         <div>
                                             <div className="text-2xl font-bold text-white">{plan.limit}</div>
-                                            <div className="text-xs text-slate-400">WhatsApp Accounts</div>
+                                            <div className="text-xs text-slate-400">{t.whatsappAccounts}</div>
                                         </div>
                                     </div>
 
@@ -195,14 +215,14 @@ export default function UpgradePage() {
                                         {loading ? (
                                             <span className="flex items-center justify-center gap-2">
                                                 <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                                                Processing...
+                                                {t.processingPayment}
                                             </span>
                                         ) : isCurrentPlan ? (
-                                            'Current Plan'
+                                            t.currentPlan
                                         ) : isDowngrade ? (
-                                            'Downgrade'
+                                            t.downgrade
                                         ) : (
-                                            'Upgrade Now'
+                                            t.upgradeNow
                                         )}
                                     </button>
                                 </div>
@@ -214,7 +234,7 @@ export default function UpgradePage() {
                 {/* Footer Note */}
                 <div className="mt-10 text-center">
                     <p className="text-slate-500 text-sm">
-                        Need more than 10 accounts? <a href="mailto:support@zaptodos.com" className="text-cyan-400 hover:text-cyan-300 underline">Contact us</a> for enterprise pricing.
+                        {t.needMoreAccounts} <a href="mailto:support@zaptodos.com" className="text-cyan-400 hover:text-cyan-300 underline">{t.contactUs}</a> {t.forEnterprise}
                     </p>
                 </div>
             </div>
@@ -229,30 +249,33 @@ export default function UpgradePage() {
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-400"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-semibold text-white">Cannot Downgrade</h3>
-                                    <p className="text-sm text-slate-400">Too many active profiles</p>
+                                    <h3 className="text-lg font-semibold text-white">{t.cannotDowngrade}</h3>
+                                    <p className="text-sm text-slate-400">{t.tooManyProfiles}</p>
                                 </div>
                             </div>
                         </div>
                         <div className="p-6">
                             <p className="text-slate-300 mb-4">
-                                You currently have <span className="text-white font-bold">{profilesCount} profiles</span>, but the <span className="text-white font-bold">{downgradeError.targetPlan}</span> plan only allows <span className="text-white font-bold">{downgradeError.targetLimit} profiles</span>.
+                                {t.downgradeWarning
+                                    .replace('{count}', String(profilesCount))
+                                    .replace('{plan}', downgradeError.targetPlan)
+                                    .replace('{limit}', String(downgradeError.targetLimit))}
                             </p>
                             <p className="text-slate-400 text-sm mb-6">
-                                To avoid accidentally deleting your data, please go to the dashboard and manually remove {profilesCount - downgradeError.targetLimit} profile{profilesCount - downgradeError.targetLimit > 1 ? 's' : ''} before downgrading.
+                                {t.downgradeHelp.replace('{count}', String(profilesCount - downgradeError.targetLimit))}
                             </p>
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => router.push('/')}
                                     className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-2.5 rounded-lg transition-colors"
                                 >
-                                    Go to Dashboard
+                                    {t.goToDashboard}
                                 </button>
                                 <button
                                     onClick={() => setDowngradeError(null)}
                                     className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 rounded-lg transition-colors"
                                 >
-                                    Cancel
+                                    {t.cancel}
                                 </button>
                             </div>
                         </div>

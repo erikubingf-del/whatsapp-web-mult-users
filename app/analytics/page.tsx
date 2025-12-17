@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { translations } from '../translations';
 
 interface AnalyticsData {
     totalMessages: number;
@@ -15,10 +16,26 @@ export default function AnalyticsPage() {
     const router = useRouter();
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [language, setLanguage] = useState<'pt' | 'en'>('pt');
+
+    const t = translations[language];
 
     useEffect(() => {
         fetchAnalytics();
+        fetchSettings();
     }, []);
+
+    const fetchSettings = async () => {
+        try {
+            const res = await fetch('/api/settings');
+            if (res.ok) {
+                const data = await res.json();
+                setLanguage((data.language as 'en' | 'pt') || 'pt');
+            }
+        } catch (e) {
+            console.error('Failed to fetch settings', e);
+        }
+    };
 
     const fetchAnalytics = async () => {
         try {
@@ -35,7 +52,7 @@ export default function AnalyticsPage() {
     if (loading) {
         return (
             <div className="flex h-screen bg-[#0A192F] items-center justify-center text-slate-400">
-                Loading analytics...
+                {t.connecting}
             </div>
         );
     }
@@ -79,20 +96,20 @@ export default function AnalyticsPage() {
 
             {/* Main Content */}
             <div className="flex-1 overflow-y-auto p-8">
-                <h1 className="text-2xl font-bold text-white mb-8">Analytics Dashboard</h1>
+                <h1 className="text-2xl font-bold text-white mb-8">{t.analyticsDashboard}</h1>
 
                 {/* KPI Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="bg-[#112240] p-6 rounded-xl border border-slate-800/50 shadow-lg">
-                        <div className="text-slate-400 text-sm font-medium mb-2">Total Messages</div>
+                        <div className="text-slate-400 text-sm font-medium mb-2">{t.totalMessages}</div>
                         <div className="text-3xl font-bold text-cyan-400">{(data.totalMessages || 0).toLocaleString()}</div>
                     </div>
                     <div className="bg-[#112240] p-6 rounded-xl border border-slate-800/50 shadow-lg">
-                        <div className="text-slate-400 text-sm font-medium mb-2">Total Chats</div>
+                        <div className="text-slate-400 text-sm font-medium mb-2">{t.totalChats}</div>
                         <div className="text-3xl font-bold text-purple-400">{(data.totalChats || 0).toLocaleString()}</div>
                     </div>
                     <div className="bg-[#112240] p-6 rounded-xl border border-slate-800/50 shadow-lg">
-                        <div className="text-slate-400 text-sm font-medium mb-2">Active Phones</div>
+                        <div className="text-slate-400 text-sm font-medium mb-2">{t.activePhones}</div>
                         <div className="text-3xl font-bold text-green-400">{data.activePhones || 0}</div>
                     </div>
                 </div>
@@ -100,7 +117,7 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Activity Chart */}
                     <div className="bg-[#112240] p-6 rounded-xl border border-slate-800/50 shadow-lg">
-                        <h3 className="text-lg font-medium text-white mb-6">Activity (Last 7 Days)</h3>
+                        <h3 className="text-lg font-medium text-white mb-6">{t.activityLast7Days}</h3>
                         {activityLast7Days.length > 0 ? (
                             <div className="h-64 flex items-end justify-between gap-2">
                                 {activityLast7Days.map((day, i) => (
@@ -110,7 +127,7 @@ export default function AnalyticsPage() {
                                             style={{ height: `${(day.count / maxActivity) * 100}%` }}
                                         >
                                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-slate-700">
-                                                {day.count} msgs
+                                                {day.count} {t.msgs}
                                             </div>
                                         </div>
                                         <div className="text-xs text-slate-500 rotate-45 origin-left mt-2">{day.date.split('/')[0]}/{day.date.split('/')[1]}</div>
@@ -119,14 +136,14 @@ export default function AnalyticsPage() {
                             </div>
                         ) : (
                             <div className="h-64 flex items-center justify-center text-slate-500">
-                                No activity data available
+                                {t.noActivityData}
                             </div>
                         )}
                     </div>
 
                     {/* Top Profiles */}
                     <div className="bg-[#112240] p-6 rounded-xl border border-slate-800/50 shadow-lg">
-                        <h3 className="text-lg font-medium text-white mb-6">Messages by Phone</h3>
+                        <h3 className="text-lg font-medium text-white mb-6">{t.messagesByPhone}</h3>
                         {messagesByProfile.length > 0 ? (
                             <div className="space-y-4">
                                 {messagesByProfile.map((profile, i) => (
@@ -146,7 +163,7 @@ export default function AnalyticsPage() {
                             </div>
                         ) : (
                             <div className="h-32 flex items-center justify-center text-slate-500">
-                                No profile data available
+                                {t.noProfileData}
                             </div>
                         )}
                     </div>

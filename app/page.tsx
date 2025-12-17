@@ -24,7 +24,7 @@ export default function Home() {
   // Settings State
   const [companyName, setCompanyName] = useState('My Users');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [language, setLanguage] = useState<'en' | 'pt'>('en');
+  const [language, setLanguage] = useState<'en' | 'pt'>('pt');
   const t = translations[language];
 
   // Edit & Menu States
@@ -74,7 +74,7 @@ export default function Home() {
         const data = await res.json();
         setCompanyName(data.companyName || 'My Users');
         setLogoUrl(data.logoUrl || null);
-        setLanguage((data.language as 'en' | 'pt') || 'en');
+        setLanguage((data.language as 'en' | 'pt') || 'pt');
       }
     } catch (e) {
       console.error('Error fetching settings:', e);
