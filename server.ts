@@ -549,27 +549,32 @@ const port = process.env.PORT || 3000;
       }
     });
 
-    server.get('/api/profiles/:id/debug/selectors', requireAuth, verifyProfileOwnership, async (req: AuthenticatedRequest, res) => {
-      try {
-        const page = await browserManager.getPage(req.params.id);
-        if (!page) return res.status(404).send('Page not found');
+    // Debug selectors endpoint (disabled in production due to TypeScript DOM type issues)
+    if (dev) {
+      server.get('/api/profiles/:id/debug/selectors', requireAuth, verifyProfileOwnership, async (req: AuthenticatedRequest, res) => {
+        try {
+          const page = await browserManager.getPage(req.params.id);
+          if (!page) return res.status(404).send('Page not found');
 
-        const result = await page.evaluate(() => {
-          return {
-            chatList: !!document.querySelector('div[aria-label="Chat list"]'),
-            msgContainerCount: document.querySelectorAll('div[data-testid="msg-container"]').length || document.querySelectorAll('div[role="row"]').length,
-            landingWrapper: !!document.querySelector('div[data-testid="intro-md-beta-logo-dark"]'),
-            title: document.title,
-            url: document.location.href,
-            bodyText: document.body.innerText.substring(0, 500),
-            htmlLength: document.body.innerHTML.length
-          };
-        });
-        res.json(result);
-      } catch (e: any) {
-        res.status(500).json({ error: dev ? e.message : 'Debug failed' });
-      }
-    });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const result = await page.evaluate(() => {
+            const doc = (globalThis as any).document;
+            return {
+              chatList: !!doc.querySelector('div[aria-label="Chat list"]'),
+              msgContainerCount: doc.querySelectorAll('div[data-testid="msg-container"]').length || doc.querySelectorAll('div[role="row"]').length,
+              landingWrapper: !!doc.querySelector('div[data-testid="intro-md-beta-logo-dark"]'),
+              title: doc.title,
+              url: doc.location.href,
+              bodyText: doc.body.innerText.substring(0, 500),
+              htmlLength: doc.body.innerHTML.length
+            };
+          });
+          res.json(result);
+        } catch (e: any) {
+          res.status(500).json({ error: e.message });
+        }
+      });
+    }
 
     // ============================================
     // API ROUTES: Search (Protected)
