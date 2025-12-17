@@ -16,8 +16,8 @@ function ResetPasswordForm() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
 
-    const email = searchParams.get('email');
-    const token = searchParams.get('token');
+    const email = searchParams?.get('email') ?? null;
+    const token = searchParams?.get('token') ?? null;
 
     // Validate token on mount
     useEffect(() => {
