@@ -127,8 +127,16 @@ export class BrowserManager {
 
       return page;
 
-    } catch (e) {
-      console.error(`Failed to create context for ${profileId}`, e);
+    } catch (e: any) {
+      console.error(`Failed to create context for ${profileId}:`, e.message || e);
+      // Provide more specific error messages
+      if (e.message?.includes('Executable doesn\'t exist')) {
+        throw new Error('Playwright browsers not installed. Run: npx playwright install chromium');
+      } else if (e.message?.includes('EACCES') || e.message?.includes('permission')) {
+        throw new Error('Permission denied creating browser session directory');
+      } else if (e.message?.includes('ENOSPC')) {
+        throw new Error('No disk space available for browser session');
+      }
       throw e;
     }
   }
