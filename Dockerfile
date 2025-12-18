@@ -15,7 +15,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Stage 3: Production Runner
-FROM mcr.microsoft.com/playwright:v1.40.0-jammy AS runner
+FROM mcr.microsoft.com/playwright:v1.49.1-jammy AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
@@ -37,6 +37,9 @@ COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
 # Regenerate Prisma Client for Debian
 RUN npx prisma generate
+
+# Install Playwright browsers matching the library version
+RUN npx playwright install chromium --with-deps
 
 # Create directories for persistent data
 RUN mkdir -p .sessions public/uploads logs data sessions
