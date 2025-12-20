@@ -103,8 +103,20 @@ const port = process.env.PORT || 3000;
     // ============================================
     // MIDDLEWARE: Body Parser & Cookie Parser
     // ============================================
-    server.use(bodyParser.json({ limit: '10mb' }));
-    server.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+    // Skip body parsing for Next.js API routes (they handle their own parsing)
+    const skipBodyParserPaths = ['/api/auth/'];
+    server.use((req, res, next) => {
+      if (skipBodyParserPaths.some(path => req.path.startsWith(path))) {
+        return next();
+      }
+      bodyParser.json({ limit: '10mb' })(req, res, next);
+    });
+    server.use((req, res, next) => {
+      if (skipBodyParserPaths.some(path => req.path.startsWith(path))) {
+        return next();
+      }
+      bodyParser.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+    });
     server.use(cookieParser());
 
     // ============================================
