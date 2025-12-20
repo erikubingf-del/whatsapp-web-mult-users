@@ -169,12 +169,13 @@ const port = process.env.PORT || 3000;
     });
 
     // Apply rate limiters - skip session endpoints (called frequently by NextAuth)
+    // Note: When mounted on '/api/', req.path doesn't include the '/api' prefix
     server.use('/api/', (req, res, next) => {
       // Skip rate limiting for session checks and NextAuth internal endpoints
-      if (req.path.startsWith('/api/auth/session') ||
-          req.path.startsWith('/api/auth/_log') ||
-          req.path.startsWith('/api/auth/csrf') ||
-          req.path.startsWith('/api/auth/providers')) {
+      if (req.path.startsWith('/auth/session') ||
+          req.path.startsWith('/auth/_log') ||
+          req.path.startsWith('/auth/csrf') ||
+          req.path.startsWith('/auth/providers')) {
         return next();
       }
       return apiLimiter(req, res, next);
