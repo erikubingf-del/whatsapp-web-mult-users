@@ -927,6 +927,15 @@ const port = process.env.PORT || 3000;
           return res.status(401).json({ error: 'Authentication required' });
         }
 
+        // First verify user exists (handles stale sessions after DB reset)
+        const existingUser = await prisma.user.findUnique({
+          where: { id: req.user.id }
+        });
+
+        if (!existingUser) {
+          return res.status(401).json({ error: 'Session expired. Please login again.' });
+        }
+
         const now = new Date();
         const trialEnds = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
 
