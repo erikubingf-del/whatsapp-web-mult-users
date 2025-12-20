@@ -77,8 +77,9 @@ export default function UpgradePage() {
             });
 
             if (res.ok) {
-                await update({ tier });
-                router.push('/');
+                // Force a full page reload to ensure session is fully refreshed with new tier
+                await update();
+                window.location.href = '/';
             }
         } catch (e) {
             console.error('Failed to update plan', e);

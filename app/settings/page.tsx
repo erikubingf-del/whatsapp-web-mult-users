@@ -292,8 +292,9 @@ export default function SettingsPage() {
             });
 
             if (res.ok) {
-                await update({ tier });
-                router.refresh();
+                // Force a full page reload to ensure session is fully refreshed with new tier
+                await update();
+                window.location.reload();
             }
         } catch (e) {
             console.error('Failed to update plan', e);

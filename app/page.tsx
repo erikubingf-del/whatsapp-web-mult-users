@@ -15,7 +15,7 @@ interface Profile {
 
 export default function Home() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -45,12 +45,14 @@ export default function Home() {
       router.push('/login');
       return;
     }
+    // Refresh session to ensure tier is up-to-date
+    updateSession();
     // Check if user has selected a plan (has started trial)
     const hasSelectedPlan = (session.user as any)?.hasSelectedPlan;
     if (!hasSelectedPlan) {
       router.push('/select-plan');
     }
-  }, [session, status, router]);
+  }, [session, status, router, updateSession]);
 
   useEffect(() => {
     if (!session) return;
