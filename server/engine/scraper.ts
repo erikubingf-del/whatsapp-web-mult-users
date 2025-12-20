@@ -283,14 +283,48 @@ export class Scraper {
                     });
                 };
 
+                // First, discover all available databases
+                const discoverDatabases = async (): Promise<string[]> => {
+                    try {
+                        // Modern browsers support indexedDB.databases()
+                        if ('databases' in indexedDB) {
+                            const dbs = await (indexedDB as any).databases();
+                            console.log('[Backup] All available IndexedDB databases:', dbs.map((d: any) => d.name));
+                            return dbs.map((d: any) => d.name).filter(Boolean);
+                        }
+                    } catch (e) {
+                        console.log('[Backup] Could not enumerate databases:', e);
+                    }
+                    // Fallback to known names
+                    return ['wawc', 'model-storage', 'wawc_db_enc', 'WaWebSessionStorage'];
+                };
+
+                const availableDbNames = await discoverDatabases();
+                console.log('[Backup] Discovered databases:', availableDbNames);
+
                 // Try to open WhatsApp's IndexedDB (name may vary between versions)
-                const openDB = (): Promise<IDBDatabase | null> => {
+                const openDB = (): Promise<{ db: IDBDatabase; dbName: string } | null> => {
                     return new Promise((resolve) => {
-                        const dbNames = ['wawc', 'model-storage', 'wawc_db_enc'];
+                        // Prioritize likely WhatsApp database names
+                        const dbNames = [...new Set([
+                            ...availableDbNames.filter(n =>
+                                n.toLowerCase().includes('wa') ||
+                                n.toLowerCase().includes('whatsapp') ||
+                                n === 'model-storage'
+                            ),
+                            'wawc',
+                            'model-storage',
+                            'wawc_db_enc',
+                            'WaWebSessionStorage',
+                            ...availableDbNames
+                        ])];
+
+                        console.log('[Backup] Will try databases in order:', dbNames);
                         let tried = 0;
 
                         const tryNext = () => {
                             if (tried >= dbNames.length) {
+                                console.log('[Backup] No suitable database found after trying all options');
                                 resolve(null);
                                 return;
                             }
@@ -299,24 +333,35 @@ export class Scraper {
                             tried++;
 
                             try {
+                                console.log(`[Backup] Trying database: ${dbName}`);
                                 const request = indexedDB.open(dbName);
-                                request.onerror = () => tryNext();
+                                request.onerror = (e) => {
+                                    console.log(`[Backup] Failed to open ${dbName}:`, e);
+                                    tryNext();
+                                };
                                 request.onsuccess = () => {
                                     const db = request.result;
-                                    // Verify it has the expected stores
+                                    // Get all store names
                                     const storeNames = Array.from(db.objectStoreNames);
+                                    console.log(`[Backup] Database ${dbName} stores:`, storeNames);
+
+                                    // Check if it has relevant stores
                                     if (storeNames.some(name =>
-                                        name.includes('chat') ||
-                                        name.includes('message') ||
-                                        name.includes('msg')
+                                        name.toLowerCase().includes('chat') ||
+                                        name.toLowerCase().includes('message') ||
+                                        name.toLowerCase().includes('msg') ||
+                                        name.toLowerCase().includes('conversation')
                                     )) {
-                                        resolve(db);
+                                        console.log(`[Backup] Found suitable database: ${dbName}`);
+                                        resolve({ db, dbName });
                                     } else {
+                                        console.log(`[Backup] Database ${dbName} has no chat/message stores, trying next`);
                                         db.close();
                                         tryNext();
                                     }
                                 };
                             } catch (e) {
+                                console.log(`[Backup] Error opening ${dbName}:`, e);
                                 tryNext();
                             }
                         };
@@ -325,33 +370,54 @@ export class Scraper {
                     });
                 };
 
-                const db = await openDB();
-                if (!db) {
+                const dbResult = await openDB();
+                if (!dbResult) {
+                    // Log all databases for debugging
+                    console.log('[Backup] FAILED - Could not find any WhatsApp IndexedDB');
                     return {
                         chats: [],
                         messages: [],
                         contacts: [],
                         success: false,
-                        error: 'Could not find WhatsApp IndexedDB'
+                        error: `Could not find WhatsApp IndexedDB. Available: ${availableDbNames.join(', ')}`
                     };
                 }
 
+                const { db, dbName } = dbResult;
+
                 // Get all available store names
                 const storeNames = Array.from(db.objectStoreNames);
-                console.log('Available IndexedDB stores:', storeNames);
+                console.log(`[Backup] Using database: ${dbName}, stores:`, storeNames);
 
-                // Find the right store names (they can vary)
-                const chatStoreName = storeNames.find(n => n === 'chat' || n.includes('chat')) || 'chat';
-                const messageStoreName = storeNames.find(n => n === 'message' || n.includes('message') || n.includes('msg')) || 'message';
-                const contactStoreName = storeNames.find(n => n === 'contact' || n.includes('contact')) || 'contact';
+                // Find the right store names (they can vary) - be more flexible with matching
+                const chatStoreName = storeNames.find(n =>
+                    n.toLowerCase() === 'chat' ||
+                    n.toLowerCase().includes('chat') ||
+                    n.toLowerCase().includes('conversation')
+                ) || 'chat';
 
-                // Extract raw data
-                const rawChats = storeNames.includes(chatStoreName)
+                const messageStoreName = storeNames.find(n =>
+                    n.toLowerCase() === 'message' ||
+                    n.toLowerCase().includes('message') ||
+                    n.toLowerCase().includes('msg')
+                ) || 'message';
+
+                const contactStoreName = storeNames.find(n =>
+                    n.toLowerCase() === 'contact' ||
+                    n.toLowerCase().includes('contact')
+                ) || 'contact';
+
+                console.log(`[Backup] Store names - chat: ${chatStoreName}, message: ${messageStoreName}, contact: ${contactStoreName}`);
+
+                // Extract raw data with existence checks
+                const rawChats = storeNames.some(s => s.toLowerCase() === chatStoreName.toLowerCase())
                     ? await getAllFromStore(db, chatStoreName) : [];
-                const rawMessages = storeNames.includes(messageStoreName)
+                const rawMessages = storeNames.some(s => s.toLowerCase() === messageStoreName.toLowerCase())
                     ? await getAllFromStore(db, messageStoreName) : [];
-                const rawContacts = storeNames.includes(contactStoreName)
+                const rawContacts = storeNames.some(s => s.toLowerCase() === contactStoreName.toLowerCase())
                     ? await getAllFromStore(db, contactStoreName) : [];
+
+                console.log(`[Backup] Raw counts - chats: ${rawChats.length}, messages: ${rawMessages.length}, contacts: ${rawContacts.length}`);
 
                 db.close();
 
@@ -448,25 +514,84 @@ export class Scraper {
      * This works when IndexedDB is not accessible but the page is loaded
      */
     async extractFromGlobalStore(): Promise<ExtractedData | null> {
-        console.log('Attempting extraction from global Store...');
+        console.log('[Backup] Attempting extraction from global Store...');
 
         try {
             const data = await this.page.evaluate(() => {
                 // WhatsApp Web exposes some data on window objects
                 const win = window as any;
 
-                // Try different known global objects
-                const Store = win.Store || win.WAPI?.Store || win.webpackChunkwhatsapp_web_client;
+                console.log('[Backup] Looking for global Store object...');
+
+                // Try different known global objects - WhatsApp has changed these over time
+                let Store = null;
+
+                // Method 1: Direct Store object
+                if (win.Store) {
+                    console.log('[Backup] Found window.Store');
+                    Store = win.Store;
+                }
+
+                // Method 2: WAPI wrapper
+                if (!Store && win.WAPI?.Store) {
+                    console.log('[Backup] Found window.WAPI.Store');
+                    Store = win.WAPI.Store;
+                }
+
+                // Method 3: Webpack chunk (newer WhatsApp versions)
+                if (!Store && win.webpackChunkwhatsapp_web_client) {
+                    console.log('[Backup] Found webpackChunkwhatsapp_web_client, searching for Store...');
+                    try {
+                        // Try to find Store in webpack modules
+                        for (const chunk of win.webpackChunkwhatsapp_web_client) {
+                            if (chunk && chunk[1]) {
+                                for (const moduleId in chunk[1]) {
+                                    try {
+                                        const module = chunk[1][moduleId];
+                                        if (module?.default?.Chat || module?.Chat) {
+                                            Store = module.default || module;
+                                            console.log('[Backup] Found Store in webpack chunk');
+                                            break;
+                                        }
+                                    } catch (e) { /* ignore */ }
+                                }
+                            }
+                            if (Store) break;
+                        }
+                    } catch (e) {
+                        console.log('[Backup] Error searching webpack chunks:', e);
+                    }
+                }
+
+                // Method 4: Search window for any object with Chat property
                 if (!Store) {
-                    console.log('Global Store not found');
+                    console.log('[Backup] Searching window for objects with Chat property...');
+                    for (const key of Object.keys(win)) {
+                        try {
+                            if (win[key] && typeof win[key] === 'object' && win[key].Chat) {
+                                Store = win[key];
+                                console.log(`[Backup] Found potential Store at window.${key}`);
+                                break;
+                            }
+                        } catch (e) { /* ignore */ }
+                    }
+                }
+
+                if (!Store) {
+                    console.log('[Backup] Global Store not found - all methods exhausted');
                     return null;
                 }
 
                 try {
                     // Try to get chats from Store
+                    console.log('[Backup] Store.Chat:', Store.Chat ? 'exists' : 'missing');
+
                     const chatModels = Store.Chat?.getModelsArray?.() ||
                                        Store.Chat?.models ||
-                                       [];
+                                       Store.Chat?._models ||
+                                       (Array.isArray(Store.Chat) ? Store.Chat : []);
+
+                    console.log(`[Backup] Found ${chatModels.length} chat models in Store`);
 
                     const chats: any[] = [];
                     const messages: any[] = [];
@@ -476,26 +601,34 @@ export class Scraper {
 
                         chats.push({
                             id: chatId,
-                            name: chat.name || chat.formattedTitle || chat.contact?.name || chatId.split('@')[0],
+                            name: chat.name || chat.formattedTitle || chat.contact?.name || chat.contact?.pushname || chatId.split('@')[0],
                             isGroup: chat.isGroup || chatId.includes('@g.us'),
                             unreadCount: chat.unreadCount || 0,
-                            timestamp: chat.t || 0
+                            timestamp: chat.t || chat.timestamp || 0
                         });
 
                         // Get messages for this chat
-                        const chatMsgs = chat.msgs?.getModelsArray?.() || chat.msgs?.models || [];
+                        const chatMsgs = chat.msgs?.getModelsArray?.() ||
+                                        chat.msgs?.models ||
+                                        chat.msgs?._models ||
+                                        chat.messages?.getModelsArray?.() ||
+                                        chat.messages?.models ||
+                                        [];
+
                         for (const msg of chatMsgs) {
                             messages.push({
-                                id: msg.id?._serialized || msg.id?.id || '',
+                                id: msg.id?._serialized || msg.id?.id || `${msg.t}_${chatId}`,
                                 chatId,
-                                body: msg.body || '',
-                                timestamp: msg.t || 0,
-                                fromMe: msg.id?.fromMe ?? false,
+                                body: msg.body || msg.text || msg.caption || '',
+                                timestamp: msg.t || msg.timestamp || 0,
+                                fromMe: msg.id?.fromMe ?? msg.fromMe ?? false,
                                 type: msg.type || 'chat',
-                                hasMedia: msg.hasMedia || false
+                                hasMedia: msg.hasMedia || !!msg.mediaData || false
                             });
                         }
                     }
+
+                    console.log(`[Backup] Store extraction result - chats: ${chats.length}, messages: ${messages.length}`);
 
                     return {
                         chats,
@@ -504,13 +637,13 @@ export class Scraper {
                         success: true
                     };
                 } catch (e) {
-                    console.error('Error extracting from Store:', e);
+                    console.error('[Backup] Error extracting from Store:', e);
                     return null;
                 }
             });
 
             if (data) {
-                console.log(`Global Store extraction: ${data.chats.length} chats, ${data.messages.length} messages`);
+                console.log(`[Backup] Global Store extraction: ${data.chats.length} chats, ${data.messages.length} messages`);
             }
 
             return data ? {
@@ -520,7 +653,7 @@ export class Scraper {
             } : null;
 
         } catch (error: any) {
-            console.error('Global Store extraction failed:', error);
+            console.error('[Backup] Global Store extraction failed:', error);
             return null;
         }
     }
@@ -529,22 +662,32 @@ export class Scraper {
      * Combined extraction: tries IndexedDB first, then falls back to global Store
      */
     async extractAllDataWithFallback(): Promise<ExtractedData> {
+        console.log('[Backup] Starting combined extraction...');
+
         // Try IndexedDB first (most reliable)
         let data = await this.extractAllData();
 
+        console.log(`[Backup] IndexedDB result - success: ${data.success}, chats: ${data.chats.length}, messages: ${data.messages.length}`);
+
         // If IndexedDB failed or returned no data, try global Store
         if (!data.success || (data.chats.length === 0 && data.messages.length === 0)) {
-            console.log('IndexedDB extraction incomplete, trying global Store fallback...');
+            console.log('[Backup] IndexedDB extraction incomplete, trying global Store fallback...');
             const fallbackData = await this.extractFromGlobalStore();
 
             if (fallbackData && (fallbackData.chats.length > 0 || fallbackData.messages.length > 0)) {
+                console.log(`[Backup] Global Store fallback succeeded - chats: ${fallbackData.chats.length}, messages: ${fallbackData.messages.length}`);
                 data = fallbackData;
+            } else {
+                console.log('[Backup] Global Store fallback also returned no data');
             }
         }
 
         // If still no data, the page might not be fully loaded
         if (data.chats.length === 0 && data.messages.length === 0) {
             data.error = data.error || 'No data found - WhatsApp may not be fully loaded or logged in';
+            console.log(`[Backup] FINAL RESULT: No data extracted. Error: ${data.error}`);
+        } else {
+            console.log(`[Backup] FINAL RESULT: Extracted ${data.chats.length} chats and ${data.messages.length} messages`);
         }
 
         return data;
