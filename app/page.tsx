@@ -37,6 +37,7 @@ export default function Home() {
 
   const menuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const hasInitialized = useRef(false);
 
   // Auth check - redirect to login if not authenticated, or to plan selection if no plan selected
   useEffect(() => {
@@ -45,17 +46,20 @@ export default function Home() {
       router.push('/login');
       return;
     }
-    // Refresh session to ensure tier is up-to-date
-    updateSession();
     // Check if user has selected a plan (has started trial)
     const hasSelectedPlan = (session.user as any)?.hasSelectedPlan;
     if (!hasSelectedPlan) {
       router.push('/select-plan');
     }
-  }, [session, status, router, updateSession]);
+  }, [session, status, router]);
 
+  // Initial data fetch - only once when session is available
   useEffect(() => {
-    if (!session) return;
+    if (!session || hasInitialized.current) return;
+    hasInitialized.current = true;
+
+    // Refresh session once to ensure tier is up-to-date
+    updateSession();
     fetchProfiles();
     fetchSettings();
 
