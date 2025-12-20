@@ -297,7 +297,7 @@ export class BrowserManager {
 
     // Try to take an initial screenshot to verify page is working
     try {
-      const testBuffer = await page.screenshot({ type: 'jpeg', quality: 50 });
+      const testBuffer = await page.screenshot({ type: 'jpeg', quality: 75 });
       console.log(`Initial screenshot successful for ${profileId}, size: ${testBuffer.length}`);
       onFrame(testBuffer); // Send first frame immediately
     } catch (e) {
@@ -308,7 +308,7 @@ export class BrowserManager {
     const interval = setInterval(async () => {
       try {
         if (!page.isClosed()) {
-          const buffer = await page.screenshot({ type: 'jpeg', quality: 50 });
+          const buffer = await page.screenshot({ type: 'jpeg', quality: 75 });
           onFrame(buffer);
         } else {
           console.log(`Page closed for ${profileId}, stopping screencast`);
@@ -318,7 +318,7 @@ export class BrowserManager {
       } catch (e) {
         console.error(`Screencast error for ${profileId}`, e);
       }
-    }, 100); // 10 FPS
+    }, 50); // 20 FPS
 
     this.screencastIntervals.set(profileId, interval);
     return true;

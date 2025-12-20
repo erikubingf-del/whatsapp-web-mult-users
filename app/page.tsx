@@ -581,8 +581,27 @@ function SessionStream({ profileId, onStatusChange }: { profileId: string; onSta
     if (!imgRef.current || !socketRef.current) return;
 
     const rect = imgRef.current.getBoundingClientRect();
-    const scaleX = imgRef.current.naturalWidth / rect.width;
-    const scaleY = imgRef.current.naturalHeight / rect.height;
+    const naturalWidth = imgRef.current.naturalWidth || 1920;
+    const naturalHeight = imgRef.current.naturalHeight || 1080;
+
+    // Calculate actual rendered size with object-contain
+    const containerAspect = rect.width / rect.height;
+    const imageAspect = naturalWidth / naturalHeight;
+
+    let renderedWidth: number, renderedHeight: number;
+    if (imageAspect > containerAspect) {
+      // Image is wider - width is constrained
+      renderedWidth = rect.width;
+      renderedHeight = rect.width / imageAspect;
+    } else {
+      // Image is taller - height is constrained
+      renderedHeight = rect.height;
+      renderedWidth = rect.height * imageAspect;
+    }
+
+    // Image is centered, calculate offset
+    const offsetX = (rect.width - renderedWidth) / 2;
+    const offsetY = (rect.height - renderedHeight) / 2;
 
     const eventData: any = { type };
 
@@ -592,8 +611,13 @@ function SessionStream({ profileId, onStatusChange }: { profileId: string; onSta
     }
 
     if (type === 'mousemove' || type === 'mousedown' || type === 'mouseup' || type === 'contextmenu' || type === 'dblclick') {
-      eventData.x = (e.clientX - rect.left) * scaleX;
-      eventData.y = (e.clientY - rect.top) * scaleY;
+      // Get position relative to actual rendered image (not container)
+      const relativeX = e.clientX - rect.left - offsetX;
+      const relativeY = e.clientY - rect.top - offsetY;
+
+      // Scale to actual image coordinates
+      eventData.x = (relativeX / renderedWidth) * naturalWidth;
+      eventData.y = (relativeY / renderedHeight) * naturalHeight;
     }
 
     if (type === 'wheel') {
